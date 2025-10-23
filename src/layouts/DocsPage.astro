@@ -1,0 +1,10 @@
+---
+import LeftSidebar from "@/layouts/LeftSidebar.astro";
+const { Content } = Astro.props;
+---
+
+<LeftSidebar>
+  <article class="prose dark:prose-invert max-w-none">
+    <Content />
+  </article>
+</LeftSidebar>

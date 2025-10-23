@@ -1,0 +1,24 @@
+---
+import DynamicIcon from  "@/layouts/helpers/DynamicIcon.svelte"
+const { source = [], className = "" } = Astro.props;
+---
+
+<ul class={className}>
+  {source.map((social) => (
+    <li>
+      <a
+        aria-label={social.name}
+        href={social.link}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+      >
+        <span class="sr-only">{social.name}</span>
+        <DynamicIcon
+          icon={social.icon}
+          className="inline-block"
+          client:load
+        />
+      </a>
+    </li>
+  ))}
+</ul>
