@@ -1,4 +1,4 @@
-# NTA Docs: Technical Documentation Site
+# Nebula Docs: Technical Documentation Site
 
 This repository hosts a technical documentation site built with Astro and Markdown. Below, you'll find details about the project structure, commands, and resources.
 
