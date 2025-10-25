@@ -2,7 +2,9 @@
 
 Nebula is a fork of the Starlight starter kit for Astro, adapted as a documentation theme for the Nebula project. This README is maintained in English and documents repository-specific details (sidebar generation, metadata conventions, and developer commands).
 
-![Nebula logo](src/assets/light-logo.svg)
+<p align="center">
+  <img src="src/assets/light-logo.svg" alt="Nebula logo" width="240" />
+</p>
 
 ## Quick commands
 
