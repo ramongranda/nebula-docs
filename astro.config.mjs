@@ -8,6 +8,7 @@ import { buildSidebarFromFS } from "./src/config/sidebar-fs.mjs";
 import { docsWatcherIntegration } from "./src/config/docs-watcher.integration.mjs";
 
 import markdoc from "@astrojs/markdoc";
+import { fileURLToPath } from 'node:url';
 
 const isDev = process.env.NODE_ENV === "development";
 const showReference = process.env.SHOW_REFERENCE === "true";
@@ -35,4 +36,11 @@ export default defineConfig({
     autoTheme: true,
     mermaidConfig: { flowchart: { curve: "basis" } },
   }), docsWatcherIntegration()],
+  vite: {
+    resolve: {
+      alias: {
+        '~': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
+  },
 });
