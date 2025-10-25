@@ -1,0 +1,30 @@
+/* === Fuentes === */
+@import "@fontsource/fira-code/400.css";
+@import "@fontsource/fira-code/500.css";
+@import "@fontsource/fira-code/700.css";
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";
+
+/* === Tipografía global === */
+body {
+  font-family: "Roboto", "Fira Code", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--sl-color-text);
+  background-color: var(--sl-color-bg);
+}
+
+/* === Código y preformateado === */
+code, pre, kbd, samp {
+  font-family: "Fira Code", monospace;
+  font-feature-settings: "calt" 1, "liga" 1;
+  font-size: 0.95em;
+  letter-spacing: -0.01em;
+}
+
+/* === Títulos con Fira Code para estilo técnico === */
+h1, h2, h3, h4 {
+  font-family: "Fira Code", "Roboto", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}

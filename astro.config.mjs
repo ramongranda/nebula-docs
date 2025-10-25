@@ -16,6 +16,7 @@ export default defineConfig({
       title: "Nebula Docs",
       customCss: [
         // Relative path to your custom CSS file
+        "./src/styles/fonts.css",
         "./src/styles/custom.css",
       ],
       logo: {
