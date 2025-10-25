@@ -21,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@astrojs/svelte": "^7.2.0"
+    "@astrojs/svelte": "^7.2.0",
+    "starlight-auto-drafts": "^0.2.1"
   }
 }
