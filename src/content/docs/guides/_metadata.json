@@ -1,0 +1,10 @@
+{
+  "label": "Guides",
+  "order": 1,
+  "items": {
+    "example": {
+      "label": "Example Guide",
+      "order": 10
+    }
+  }
+}

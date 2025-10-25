@@ -5,6 +5,7 @@ import svelte from "@astrojs/svelte";
 import mermaid from "astro-mermaid";
 import starlightAutoDrafts from "starlight-auto-drafts";
 import { buildSidebarFromFS } from "./src/config/sidebar-fs.mjs";
+import { docsWatcherIntegration } from "./src/config/docs-watcher.integration.mjs";
 
 const isDev = process.env.NODE_ENV === "development";
 const showReference = process.env.SHOW_REFERENCE === "true";
@@ -33,5 +34,6 @@ export default defineConfig({
       autoTheme: true,
       mermaidConfig: { flowchart: { curve: "basis" } },
     }),
+    docsWatcherIntegration(),
   ],
 });
