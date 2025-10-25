@@ -22,7 +22,7 @@ pnpm preview  # preview built site locally
    ├── src/
    │   ├── assets/
    │   ├── content/
-   │   │   └── docs/           # Markdown/MDX content files and per-folder metadata
+   │   │   └── docs/           # Markdown/MDX/Markdoc content files and per-folder metadata
    │   ├── config/             # helper scripts (e.g. sidebar builder)
    │   └── content.config.ts   # Astro content collections and loaders
    ├── astro.config.mjs        # Starlight/Nebula configuration (title, sidebar hook)
@@ -42,7 +42,7 @@ Nebula includes a small custom builder that scans `src/content/docs/` and produc
 - Scans each subdirectory of `src/content/docs/` to create a section.
 - If a directory contains `_section.json`, the script reads it for section metadata (`label`, `order`, `devOnly`, `autogenerate`).
 - If `_section.json` includes `autogenerate: { "directory": "..." }`, the builder emits an `autogenerate` sidebar entry for Starlight instead of enumerating items.
-- For regular directories, the script looks for `.md` and `.mdx` files and for each content file it attempts to read a companion JSON metadata file named `<base>.meta.json` (e.g. `example.meta.json`). That metadata controls per-page `label`, `slug`, `order`, and `devOnly`.
+- For regular directories, the script looks for `.md`, `.mdx` and `.mdoc` files and for each content file it attempts to read a companion JSON metadata file named `<base>.meta.json` (e.g. `example.meta.json`). That metadata controls per-page `label`, `slug`, `order`, and `devOnly`.
 - The builder respects `devOnly` flags: pages or sections marked dev-only are included only when `NODE_ENV=development` or when `SHOW_REFERENCE=true`.
 
 ### Folder metadata details (schema & examples)
@@ -86,7 +86,7 @@ Example `example.meta.json`:
 Precedence and behavior notes
 
 - Frontmatter inside `.md`/`.mdx` remains the authoritative source for page metadata used at runtime (title, description, template). The JSON metadata in `*.meta.json` is only consulted by the sidebar builder to construct labels, slugs and ordering. When possible keep display metadata in the page frontmatter and use `.meta.json` only for navigation overrides.
-- The builder filters files by extensions `['.md', '.mdx']` and ignores other files.
+- The builder filters files by extensions `['.md', '.mdx', '.mdoc']` and ignores other files.
 - Ordering is numeric; unspecified orders default to `999`, and items are sorted ascending.
 
 How to preview dev-only content
@@ -110,16 +110,24 @@ $env:SHOW_REFERENCE='true'; pnpm dev
 - Allows partial automation (autogenerate sections) while keeping precise control via JSON metadata overrides.
 - Makes it straightforward to hide dev-only content behind environment flags when publishing.
 
-## Content metadata and validation
+## Content types, metadata and validation
 
-- The project uses `src/content.config.ts` which wires Starlight’s `docsLoader()` and `docsSchema()` to provide typed frontmatter validation for MD/MDX files. Frontmatter inside `.md`/`.mdx` is the primary source of per-page metadata.
+- Nebula admite archivos de contenido `.md`, `.mdx` y `.mdoc`.
+- Para usar componentes/etiquetas de Markdoc (por ejemplo `{% tabs %}`), usa `.mdoc`.
+- The project uses `src/content.config.ts` which wires Starlight’s `docsLoader()` and `docsSchema()` to provide typed frontmatter validation. Frontmatter inside `.md`/`.mdx`/`.mdoc` is the primary source of per-page metadata.
 - The sidebar builder augments that by reading optional JSON metadata files (`*.meta.json`) when present.
 
 ## Where to edit
 
 - To change the site title, logo, custom CSS, or integrations: edit `astro.config.mjs`.
 - To change how the sidebar is built: edit `src/config/sidebar-fs.mjs`.
-- To add or edit content: add `.md`/`.mdx` files under `src/content/docs/` and optionally create `<base>.meta.json` next to the file if you need custom `label`, `slug`, `order` or `devOnly`.
+- To add or edit content: add `.md`, `.mdx` or `.mdoc` files under `src/content/docs/` and optionally create `<base>.meta.json` next to the file if you need custom `label`, `slug`, `order` or `devOnly`.
+
+## Supported content types
+
+- `.md` — Standard Markdown.
+- `.mdx` — Markdown with JSX components.
+- `.mdoc` — Markdoc (recommended for Starlight Markdoc tags like `{% tabs %}`).
 
 ## Notes for contributors
 
@@ -166,4 +174,3 @@ Notes:
 docker run --rm -it --entrypoint sh -v ${PWD}:/app node:18-alpine
 # inside container: pnpm install && pnpm build
 ```
-

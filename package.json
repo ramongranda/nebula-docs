@@ -10,7 +10,9 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/markdoc": "^0.15.8",
     "@astrojs/starlight": "^0.36.1",
+    "@astrojs/starlight-markdoc": "^0.5.0",
     "@fontsource/fira-code": "^5.2.7",
     "@fontsource/roboto": "^5.2.8",
     "astro": "^5.6.1",

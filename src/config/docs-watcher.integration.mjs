@@ -23,46 +23,47 @@ export function docsWatcherIntegration() {
         };
 
         const log = (msg) => {
-          try { logger && logger.info && logger.info(msg, { label: 'docs-watch' }); } catch {}
+          try { logger?.info?.(msg, { label: 'docs-watch' }); } catch {}
         };
 
-        const restartIfDocs = (p) => {
+        // Debounce restarts and ignore events until the initial scan is ready.
+        let ready = false;
+        let restartTimer = null;
+        const scheduleRestart = (reason) => {
+          if (!ready) return; // avoid storms during initial scan
+          if (restartTimer) clearTimeout(restartTimer);
+          restartTimer = setTimeout(() => {
+            restartTimer = null;
+            log(`docs changed (${reason}) -> restarting dev server to rebuild sidebar`);
+            server.restart();
+          }, 200);
+        };
+
+        const onChange = (p, reason) => {
+          if (!p) return;
           if (!inDocsTree(p)) return;
-          log(`docs changed: ${p} -> restarting dev server to rebuild sidebar`);
-          server.restart();
+          scheduleRestart(`${reason}: ${p}`);
         };
 
-        // Ensure watcher is attached to both relative and absolute paths
+        // Ensure watcher includes docs root, explicit file globs (incl. .mdoc),
+        // and the sidebar builder file. Debounce + ready gating prevents storms.
         server.watcher.add([
           docsRoot,
-          docsRel,
-          `${docsRel}/**`,
-          `${docsRel}/**/*.{md,mdx,json}`,
+          'src/content/docs/**/*.{md,mdx,mdoc,json}',
           'src/config/sidebar-fs.mjs',
         ]);
 
-        server.watcher.on('add', restartIfDocs);
-        server.watcher.on('change', restartIfDocs);
-        server.watcher.on('unlink', restartIfDocs);
-        server.watcher.on('addDir', restartIfDocs);
-        server.watcher.on('unlinkDir', restartIfDocs);
+        server.watcher.on('ready', () => {
+          ready = true;
+          log('docs watcher ready');
+        });
 
-        // Catch-all and raw events to handle edge cases on Windows
-        server.watcher.on('all', (event, p) => {
-          if (!p) return;
-          if (!inDocsTree(p)) return;
-          log(`docs all: ${event} ${p} -> restarting`);
-          server.restart();
-        });
-        // @ts-ignore chokidar-specific event
-        server.watcher.on('raw', (event, p) => {
-          if (typeof p !== 'string') return;
-          if (!inDocsTree(p)) return;
-          log(`docs raw: ${event} ${p} -> restarting`);
-          server.restart();
-        });
+        server.watcher.on('add', (p) => onChange(p, 'add'));
+        server.watcher.on('change', (p) => onChange(p, 'change'));
+        server.watcher.on('unlink', (p) => onChange(p, 'unlink'));
+        server.watcher.on('addDir', (p) => onChange(p, 'addDir'));
+        server.watcher.on('unlinkDir', (p) => onChange(p, 'unlinkDir'));
       },
     },
   };
 }
-
