@@ -49,7 +49,7 @@ export function docsWatcherIntegration() {
         // and the sidebar builder file. Debounce + ready gating prevents storms.
         server.watcher.add([
           docsRoot,
-          'src/content/docs/**/*.{md,mdx,mdoc,json}',
+          'src/content/docs/**/*.{md,mdx,mdoc,astro,json}',
           'src/config/sidebar-fs.mjs',
         ]);
 

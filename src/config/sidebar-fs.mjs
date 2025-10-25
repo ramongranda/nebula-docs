@@ -20,7 +20,7 @@ function listDirs(dir) {
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
 }
-function listFiles(dir, exts = [".md", ".mdx", ".mdoc"]) {
+function listFiles(dir, exts = [".md", ".mdx", ".mdoc", ".astro"]) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .filter(
@@ -32,20 +32,34 @@ function listFiles(dir, exts = [".md", ".mdx", ".mdoc"]) {
 function readFrontmatterTitle(filePath) {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
+    const isAstro = filePath.toLowerCase().endsWith('.astro');
     if (!raw.startsWith("---")) return null;
     const end = raw.indexOf("\n---", 3);
     if (end === -1) return null;
-    const header = raw.slice(3, end).split(/\r?\n/);
-    for (const line of header) {
+    const headerBlock = raw.slice(3, end);
+    // Try YAML-style frontmatter first (for .md/.mdx/.mdoc)
+    const headerLines = headerBlock.split(/\r?\n/);
+    for (const line of headerLines) {
       const m = /^title:\s*(.*)\s*$/i.exec(line.trim());
       if (m) {
         let v = m[1] || "";
-        // strip surrounding quotes if present
         if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
           v = v.slice(1, -1);
         }
         return v.trim() || null;
       }
+    }
+    // If .astro, header is JS/TS. Look for common patterns.
+    if (isAstro) {
+      // export const title = '...'
+      let m = headerBlock.match(/export\s+const\s+title\s*=\s*['"]([^'\"]+)['"]/);
+      if (m) return m[1].trim();
+      // const title = '...'
+      m = headerBlock.match(/\bconst\s+title\s*=\s*['"]([^'\"]+)['"]/);
+      if (m) return m[1].trim();
+      // export const frontmatter = { title: '...' }
+      m = headerBlock.match(/export\s+const\s+(frontmatter|page)\s*=\s*\{[\s\S]*?title\s*:\s*['"]([^'\"]+)['"]/);
+      if (m) return m[2].trim();
     }
     return null;
   } catch {
@@ -75,7 +89,7 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
 
     // Archivos de contenido en este directorio
     for (const file of listFiles(absDir)) {
-      const base = file.replace(/\.(md|mdx|mdoc)$/i, "");
+      const base = file.replace(/\.(md|mdx|mdoc|astro)$/i, "");
       const metaFromDir = (dirMeta && typeof dirMeta === 'object')
         ? (dirMeta.items?.[base] || dirMeta[base] || {})
         : {};
@@ -85,11 +99,32 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
       const filePath = path.join(absDir, file);
       const fmTitle = readFrontmatterTitle(filePath);
 
-      items.push({
+      const isAstro = file.toLowerCase().endsWith('.astro');
+      const common = {
         __order: meta.order ?? 999,
         label: meta.label ?? fmTitle ?? base,
-        slug: `${norm(relDir)}/${base}`,
-      });
+      };
+      if (isAstro) {
+        // Para archivos .astro sólo enlazamos si existe una página real en src/pages
+        // o si viene un link explícito en metadatos.
+        const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0 ? meta.link.trim() : null;
+        if (explicitLink) {
+          items.push({ ...common, link: explicitLink });
+        } else {
+          const pageAbs = path.resolve('src/pages', relDir, `${base}.astro`);
+          const pageIdxAbs = path.resolve('src/pages', relDir, base, 'index.astro');
+          if (fs.existsSync(pageAbs)) {
+            items.push({ ...common, link: `/${norm(path.join(relDir, base))}` });
+          } else if (fs.existsSync(pageIdxAbs)) {
+            items.push({ ...common, link: `/${norm(path.join(relDir, base))}/` });
+          } else {
+            // No existe ruta real -> no lo añadimos al sidebar para evitar 404.
+          }
+        }
+      } else {
+        // Para contenido de colección (md/mdx/mdoc) usamos slug
+        items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+      }
     }
 
     // Subcarpetas (recursivo)
