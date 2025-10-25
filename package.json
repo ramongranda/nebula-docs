@@ -1,0 +1,26 @@
+{
+  "name": "nebula-docs",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.36.1",
+    "astro": "^5.6.1",
+    "astro-mermaid": "^1.1.0",
+    "mermaid": "^11.12.0",
+    "sharp": "^0.34.2",
+    "starlight-heading-badges": "^0.6.1",
+    "starlight-openapi": "^0.21.1",
+    "svelte": "^5.41.4",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@astrojs/svelte": "^7.2.0"
+  }
+}
