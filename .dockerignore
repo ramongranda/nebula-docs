@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.idea
+.vscode
+pnpm-store
+pnpm-lock.yaml
+**/node_modules
+*.log
+/.cache
+/.DS_Store

@@ -133,3 +133,37 @@ $env:SHOW_REFERENCE='true'; pnpm dev
 - Starlight: [Starlight docs](https://starlight.astro.build/)
 
 If you want, I can also add example `_section.json` and `*.meta.json` files into the repo, or generate README examples in a `docs/` folder. Tell me which you'd prefer.
+
+## Docker
+
+This repository includes a multi-stage Dockerfile that builds the site with Node (pnpm) and serves the compiled `dist/` via nginx.
+
+Build (standard):
+
+```pwsh
+docker build -t nebula-docs:latest .
+```
+
+Build including dev-only content (set `SHOW_REFERENCE=true` at build time so the sidebar builder includes dev-only sections/pages):
+
+```pwsh
+docker build -t nebula-docs:dev --build-arg SHOW_REFERENCE=true .
+```
+
+Run the container (exposes nginx on container port 80):
+
+```pwsh
+docker run -d -p 8080:80 --name nebula-site nebula-docs:latest
+# then open http://localhost:8080
+```
+
+Notes:
+
+- The `SHOW_REFERENCE` flag is a build-time arg that controls the sidebar builder's dev-only inclusion; pass it with `--build-arg SHOW_REFERENCE=true` when building the Docker image if you want those sections baked into the static build.
+- If you need to debug build-time behavior, you can run an interactive build container:
+
+```pwsh
+docker run --rm -it --entrypoint sh -v ${PWD}:/app node:18-alpine
+# inside container: pnpm install && pnpm build
+```
+
