@@ -32,7 +32,7 @@ function listFiles(dir, exts = [".md", ".mdx", ".mdoc", ".astro"]) {
 function readFrontmatterTitle(filePath) {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
-    const isAstro = filePath.toLowerCase().endsWith('.astro');
+    const isAstro = filePath.toLowerCase().endsWith(".astro");
     if (!raw.startsWith("---")) return null;
     const end = raw.indexOf("\n---", 3);
     if (end === -1) return null;
@@ -43,7 +43,10 @@ function readFrontmatterTitle(filePath) {
       const m = /^title:\s*(.*)\s*$/i.exec(line.trim());
       if (m) {
         let v = m[1] || "";
-        if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+        if (
+          (v.startsWith('"') && v.endsWith('"')) ||
+          (v.startsWith("'") && v.endsWith("'"))
+        ) {
           v = v.slice(1, -1);
         }
         return v.trim() || null;
@@ -52,13 +55,12 @@ function readFrontmatterTitle(filePath) {
     // If .astro, header is JS/TS. Look for common patterns.
     if (isAstro) {
       // export const title = '...'
-      let m = headerBlock.match(/export\s+const\s+title\s*=\s*['"]([^'\"]+)['"]/);
+      let m = /export\s+const\s+title\s*=\s*['"]([^'\"]+)['"]/.exec(headerBlock);
       if (m) return m[1].trim();
       // const title = '...'
-      m = headerBlock.match(/\bconst\s+title\s*=\s*['"]([^'\"]+)['"]/);
+      m = /\bconst\s+title\s*=\s*['"]([^'\"]+)['"]/.exec(headerBlock);
       if (m) return m[1].trim();
-      // export const frontmatter = { title: '...' }
-      m = headerBlock.match(/export\s+const\s+(frontmatter|page)\s*=\s*\{[\s\S]*?title\s*:\s*['"]([^'\"]+)['"]/);
+      m = /export\s+const\s+(frontmatter|page)\s*=\s*\{[\s\S]*?title\s*:\s*['"]([^'\"]+)['"]/.exec(headerBlock);
       if (m) return m[2].trim();
     }
     return null;
@@ -73,7 +75,7 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
 
   if (!fs.existsSync(DOCS_ROOT)) return [];
 
-  const norm = (p) => p.replace(/\\/g, '/');
+  const norm = (p) => p.replaceAll("\\", "/");
 
   /**
    * Construye una sección para un directorio concreto (recursivo).
@@ -82,7 +84,7 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
    * @param {string} dirName Nombre de la carpeta actual.
    */
   function buildSection(absDir, relDir, dirName) {
-    const dirMeta = readJSON(path.join(absDir, '_metadata.json')) || {};
+    const dirMeta = readJSON(path.join(absDir, "_metadata.json")) || {};
     if (!allow(!!dirMeta.devOnly)) return null;
 
     const items = [];
@@ -90,16 +92,17 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
     // Archivos de contenido en este directorio
     for (const file of listFiles(absDir)) {
       const base = file.replace(/\.(md|mdx|mdoc|astro)$/i, "");
-      const metaFromDir = (dirMeta && typeof dirMeta === 'object')
-        ? (dirMeta.items?.[base] || dirMeta[base] || {})
-        : {};
+      const metaFromDir =
+        dirMeta && typeof dirMeta === "object"
+          ? dirMeta.items?.[base] || dirMeta[base] || {}
+          : {};
       const meta = { ...(metaFromDir || {}) };
       if (!allow(!!meta.devOnly)) continue;
 
       const filePath = path.join(absDir, file);
       const fmTitle = readFrontmatterTitle(filePath);
 
-      const isAstro = file.toLowerCase().endsWith('.astro');
+      const isAstro = file.toLowerCase().endsWith(".astro");
       const common = {
         __order: meta.order ?? 999,
         label: meta.label ?? fmTitle ?? base,
@@ -107,49 +110,69 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
       if (isAstro) {
         // Para archivos .astro sólo enlazamos si existe una página real en src/pages
         // o si viene un link explícito en metadatos.
-          const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0 ? meta.link.trim() : null;
-          if (explicitLink) {
-            // detect external links and add safe defaults (open in new tab, noopener)
-            const isExternal = /^https?:\/\//i.test(explicitLink);
-            const linkItem = { ...common, link: explicitLink };
-            if (isExternal) {
-              // Starlight rejects unknown keys like `target`/`rel` in the sidebar config.
-              // Use a small flag `external` so the renderer can decide to add target/rel.
-              linkItem.external = true;
-            }
-            items.push(linkItem);
+        const explicitLink =
+          typeof meta.link === "string" && meta.link.trim().length > 0
+            ? meta.link.trim()
+            : null;
+        if (explicitLink) {
+          // detect external links and add safe defaults (open in new tab, noopener)
+          const isExternal = /^https?:\/\//i.test(explicitLink);
+          const linkItem = { ...common, link: explicitLink };
+          if (isExternal) {
+            // Starlight rejects unknown keys like `target`/`rel` in the sidebar config.
+            // Use a small flag `external` so the renderer can decide to add target/rel.
+            linkItem.external = true;
+          }
+          items.push(linkItem);
         } else {
-          const pageAbs = path.resolve('src/pages', relDir, `${base}.astro`);
-          const pageIdxAbs = path.resolve('src/pages', relDir, base, 'index.astro');
+          const pageAbs = path.resolve("src/pages", relDir, `${base}.astro`);
+          const pageIdxAbs = path.resolve(
+            "src/pages",
+            relDir,
+            base,
+            "index.astro"
+          );
           if (fs.existsSync(pageAbs)) {
-            items.push({ ...common, link: `/${norm(path.join(relDir, base))}` });
+            items.push({
+              ...common,
+              link: `/${norm(path.join(relDir, base))}`,
+            });
           } else if (fs.existsSync(pageIdxAbs)) {
-            items.push({ ...common, link: `/${norm(path.join(relDir, base))}/` });
+            items.push({
+              ...common,
+              link: `/${norm(path.join(relDir, base))}/`,
+            });
           } else {
             // No existe ruta real -> no lo añadimos al sidebar para evitar 404.
           }
         }
       } else {
         // Para contenido de colección (md/mdx/mdoc) usamos slug, salvo que en metadatos se provea un link/href explícito
-          const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0
-            ? meta.link.trim()
-            : (typeof meta.href === 'string' && meta.href.trim().length > 0 ? meta.href.trim() : null);
-          if (explicitLink) {
-            const isExternal = /^https?:\/\//i.test(explicitLink);
-            const linkItem = { ...common, link: explicitLink };
-            if (isExternal) {
-              linkItem.external = true;
-            }
-            items.push(linkItem);
-          } else {
-            items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+        let explicitLink = null;
+        if (typeof meta.link === "string" && meta.link.trim().length > 0) {
+          explicitLink = meta.link.trim();
+        } else if (typeof meta.href === "string" && meta.href.trim().length > 0) {
+          explicitLink = meta.href.trim();
+        }
+        if (explicitLink) {
+          const isExternal = /^https?:\/\//i.test(explicitLink);
+          const linkItem = { ...common, link: explicitLink };
+          if (isExternal) {
+            linkItem.external = true;
           }
+          items.push(linkItem);
+        } else {
+          items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+        }
       }
     }
 
     // Añadir entradas definidas en _metadata.json que no correspondan a un archivo físico
-    const metaItems = (dirMeta && typeof dirMeta === 'object') ? (dirMeta.items || {}) : {};
-    const existingBases = new Set(listFiles(absDir).map(f => f.replace(/\.(md|mdx|mdoc|astro)$/i, "")));
+    const metaItems =
+      dirMeta && typeof dirMeta === "object" ? dirMeta.items || {} : {};
+    const existingBases = new Set(
+      listFiles(absDir).map((f) => f.replace(/\.(md|mdx|mdoc|astro)$/i, ""))
+    );
     for (const metaKey of Object.keys(metaItems)) {
       if (existingBases.has(metaKey)) continue; // ya procesado por archivo real
       const meta = metaItems[metaKey] || dirMeta[metaKey] || {};
@@ -158,9 +181,12 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
         __order: meta.order ?? 999,
         label: meta.label ?? metaKey,
       };
-      const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0
-        ? meta.link.trim()
-        : (typeof meta.href === 'string' && meta.href.trim().length > 0 ? meta.href.trim() : null);
+      let explicitLink = null;
+      if (typeof meta.link === "string" && meta.link.trim().length > 0) {
+        explicitLink = meta.link.trim();
+      } else if (typeof meta.href === "string" && meta.href.trim().length > 0) {
+        explicitLink = meta.href.trim();
+      }
       if (explicitLink) {
         const isExternal = /^https?:\/\//i.test(explicitLink);
         const linkItem = { ...common, link: explicitLink };
@@ -168,7 +194,7 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
           linkItem.external = true;
         }
         items.push(linkItem);
-      } else if (typeof meta.slug === 'string' && meta.slug.trim().length > 0) {
+      } else if (typeof meta.slug === "string" && meta.slug.trim().length > 0) {
         items.push({ ...common, slug: meta.slug.trim() });
       } else {
         // If no explicit link/slug provided, we skip to avoid broken links
@@ -204,17 +230,17 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
 
   top.sort((a, b) => (a.__order ?? 999) - (b.__order ?? 999));
 
-  // Sanitize sidebar objects to only include keys accepted by Starlight.
-  // Starlight validates the sidebar shape strictly; remove any helper keys
-  // (like `external`, `target`, `rel`) before returning the structure.
-  function sanitizeNode(node) {
-    const allowed = {};
-    if (typeof node.label === 'string') allowed.label = node.label;
-    if (typeof node.link === 'string') allowed.link = node.link;
-    if (typeof node.slug === 'string') allowed.slug = node.slug;
-    if (Array.isArray(node.items)) allowed.items = node.items.map(sanitizeNode);
-    return allowed;
-  }
+// Sanitize sidebar objects to only include keys accepted by Starlight.
+// Starlight validates the sidebar shape strictly; remove any helper keys
+// (like `external`, `target`, `rel`) before returning the structure.
+function sanitizeNode(node) {
+  const allowed = {};
+  if (typeof node.label === "string") allowed.label = node.label;
+  if (typeof node.link === "string") allowed.link = node.link;
+  if (typeof node.slug === "string") allowed.slug = node.slug;
+  if (Array.isArray(node.items)) allowed.items = node.items.map(sanitizeNode);
+  return allowed;
+}
 
   return top.map(({ __order, ...s }) => sanitizeNode(s));
 }
