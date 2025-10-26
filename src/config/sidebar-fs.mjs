@@ -6,7 +6,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DOCS_ROOT = path.resolve("src/content/docs");
+const PAGES_ROOT = path.resolve("src/pages");
+const CONTENT_EXTS = [".md", ".mdx", ".mdoc", ".astro"];
+const LINK_EXT = ".link";
 
+/**
+ * Sidebar builder notes (.link support)
+ * - Co-named .link file (example.mdx + example.link): the .link file content is
+ *   treated as the URL for that entry and takes precedence over any link/href
+ *   defined in folder metadata. If no label is provided in metadata, the label
+ *   is prettified from the base filename (e.g. "authoring-content" -> "Authoring Content").
+ * - Standalone .link (example.link with no content file): creates a sidebar item
+ *   with that URL. The label and order may be provided in folder metadata under
+ *   the same base key; otherwise the label is prettified from the base filename
+ *   and order defaults to 999.
+ */
+
+// FS utils
 function readJSON(file) {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -20,7 +36,7 @@ function listDirs(dir) {
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
 }
-function listFiles(dir, exts = [".md", ".mdx", ".mdoc", ".astro"]) {
+function listFiles(dir, exts = CONTENT_EXTS) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .filter(
@@ -28,7 +44,22 @@ function listFiles(dir, exts = [".md", ".mdx", ".mdoc", ".astro"]) {
     )
     .map((d) => d.name);
 }
+function listLinkFiles(dir) {
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isFile() && d.name.toLowerCase().endsWith(LINK_EXT))
+    .map((d) => d.name);
+}
+function readLinkText(file) {
+  try {
+    const v = fs.readFileSync(file, "utf8").trim();
+    return v.length ? v : null;
+  } catch {
+    return null;
+  }
+}
 
+// Frontmatter title (YAML for md*, common patterns for Astro)
 function readFrontmatterTitle(filePath) {
   try {
     const raw = fs.readFileSync(filePath, "utf8");
@@ -37,9 +68,8 @@ function readFrontmatterTitle(filePath) {
     const end = raw.indexOf("\n---", 3);
     if (end === -1) return null;
     const headerBlock = raw.slice(3, end);
-    // Try YAML-style frontmatter first (for .md/.mdx/.mdoc)
-    const headerLines = headerBlock.split(/\r?\n/);
-    for (const line of headerLines) {
+    // YAML (md/mdx/mdoc)
+    for (const line of headerBlock.split(/\r?\n/)) {
       const m = /^title:\s*(.*)\s*$/i.exec(line.trim());
       if (m) {
         let v = m[1] || "";
@@ -52,21 +82,67 @@ function readFrontmatterTitle(filePath) {
         return v.trim() || null;
       }
     }
-    // If .astro, header is JS/TS. Look for common patterns.
+    // Astro (JS/TS)
     if (isAstro) {
-      // export const title = '...'
-      let m = /export\s+const\s+title\s*=\s*['"]([^'\"]+)['"]/.exec(headerBlock);
-      if (m) return m[1].trim();
-      // const title = '...'
-      m = /\bconst\s+title\s*=\s*['"]([^'\"]+)['"]/.exec(headerBlock);
-      if (m) return m[1].trim();
-      m = /export\s+const\s+(frontmatter|page)\s*=\s*\{[\s\S]*?title\s*:\s*['"]([^'\"]+)['"]/.exec(headerBlock);
-      if (m) return m[2].trim();
+      let m = /export\s+const\s+title\s*=\s*['"][^'\"]+['"]/ .exec(headerBlock);
+      if (m) return /['"]([^'\"]+)['"]/.exec(m[0])[1].trim();
+      m = /\bconst\s+title\s*=\s*['"][^'\"]+['"]/ .exec(headerBlock);
+      if (m) return /['"]([^'\"]+)['"]/.exec(m[0])[1].trim();
+      m = /export\s+const\s+(frontmatter|page)\s*=\s*\{[\s\S]*?title\s*:\s*['"][^'\"]+['"]/ .exec(headerBlock);
+      if (m) return /title\s*:\s*['"]([^'\"]+)['"]/.exec(m[0])[1].trim();
     }
     return null;
   } catch {
     return null;
   }
+}
+
+// Common helpers
+const norm = (p) => p.replaceAll("\\", "/");
+const sortByOrder = (a, b) => (a.__order ?? 999) - (b.__order ?? 999);
+const getExplicitLink = (meta) => {
+  if (typeof meta?.link === "string" && meta.link.trim()) return meta.link.trim();
+  if (typeof meta?.href === "string" && meta.href.trim()) return meta.href.trim();
+  return null;
+};
+const getOpenMode = (meta) => {
+  const v = typeof meta?.open === "string" ? meta.open.trim().toLowerCase() : "";
+  return v === "new" || v === "embed" || v === "same" ? v : "same";
+};
+const isExternal = (url) => /^https?:\/\//i.test(url);
+const wrapExternal = (url, mode = "same") => {
+  try {
+    const b64 = Buffer.from(String(url), "utf8")
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+    return `/ext/${mode}/${b64}`;
+  } catch {
+    return url;
+  }
+};
+const embedLink = (url) => `/ext?u=${encodeURIComponent(url)}&m=embed`;
+const newTabLink = (url) => `/ext-new?u=${encodeURIComponent(url)}`;
+
+// Pretty label from base filename (e.g., "authoring-content" -> "Authoring Content")
+function prettyLabelFromBase(base) {
+  const name = String(base).replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!name) return base;
+  return name
+    .split(" ")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+// Keep only valid keys for Starlight
+function sanitizeNode(node) {
+  const out = {};
+  if (typeof node.label === "string") out.label = node.label;
+  if (typeof node.link === "string") out.link = node.link;
+  if (typeof node.slug === "string") out.slug = node.slug;
+  if (Array.isArray(node.items)) out.items = node.items.map(sanitizeNode);
+  return out;
 }
 
 /** Construye el sidebar de Starlight escaneando carpetas (soporta anidación) */
@@ -75,22 +151,28 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
 
   if (!fs.existsSync(DOCS_ROOT)) return [];
 
-  const norm = (p) => p.replaceAll("\\", "/");
-
-  /**
-   * Construye una sección para un directorio concreto (recursivo).
-   * @param {string} absDir Ruta absoluta del directorio.
-   * @param {string} relDir Ruta relativa a `src/content/docs` (sin barra inicial).
-   * @param {string} dirName Nombre de la carpeta actual.
-   */
+  // Sección recursiva por directorio
   function buildSection(absDir, relDir, dirName) {
     const dirMeta = readJSON(path.join(absDir, "_metadata.json")) || {};
     if (!allow(!!dirMeta.devOnly)) return null;
 
     const items = [];
+    const files = listFiles(absDir);
+    const dirs = listDirs(absDir);
+    const linkFiles = listLinkFiles(absDir);
+    const linkMap = new Map(
+      linkFiles
+        .map((f) => {
+          const base = f.slice(0, -LINK_EXT.length);
+          const url = readLinkText(path.join(absDir, f));
+          return [base, url];
+        })
+        .filter(([, url]) => !!url)
+    );
+    const addedBases = new Set();
 
-    // Archivos de contenido en este directorio
-    for (const file of listFiles(absDir)) {
+    // Archivos de contenido de este directorio
+    for (const file of files) {
       const base = file.replace(/\.(md|mdx|mdoc|astro)$/i, "");
       const metaFromDir =
         dirMeta && typeof dirMeta === "object"
@@ -100,117 +182,106 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
       if (!allow(!!meta.devOnly)) continue;
 
       const filePath = path.join(absDir, file);
-      const fmTitle = readFrontmatterTitle(filePath);
-
       const isAstro = file.toLowerCase().endsWith(".astro");
-      const common = {
-        __order: meta.order ?? 999,
-        label: meta.label ?? fmTitle ?? base,
-      };
+      // Si existe .link co-nombrado y no hay label en metadata, usar un label "bonito" del nombre de fichero
+      const linkFromFile = linkMap.get(base) || null;
+      const label = linkFromFile
+        ? (meta.label ?? prettyLabelFromBase(base))
+        : (meta.label ?? readFrontmatterTitle(filePath) ?? base);
+      const common = { __order: meta.order ?? 999, label };
+
+      // Prioridad: fichero .link co-nombrado > metadatos link/href
+      const explicitLink = linkFromFile || getExplicitLink(meta);
+      if (explicitLink) {
+        const mode = getOpenMode(meta);
+        const finalLink = isExternal(explicitLink)
+          ? (mode === 'embed' ? embedLink(explicitLink)
+            : mode === 'new' ? newTabLink(explicitLink)
+            : wrapExternal(explicitLink, mode))
+          : explicitLink;
+        items.push({ ...common, link: finalLink });
+        addedBases.add(base);
+        continue;
+      }
+
       if (isAstro) {
-        // Para archivos .astro sólo enlazamos si existe una página real en src/pages
-        // o si viene un link explícito en metadatos.
-        const explicitLink =
-          typeof meta.link === "string" && meta.link.trim().length > 0
-            ? meta.link.trim()
-            : null;
-        if (explicitLink) {
-          // detect external links and add safe defaults (open in new tab, noopener)
-          const isExternal = /^https?:\/\//i.test(explicitLink);
-          const linkItem = { ...common, link: explicitLink };
-          if (isExternal) {
-            // Starlight rejects unknown keys like `target`/`rel` in the sidebar config.
-            // Use a small flag `external` so the renderer can decide to add target/rel.
-            linkItem.external = true;
-          }
-          items.push(linkItem);
+        // Enlazar sólo si existe página real en src/pages
+        const pageAbs = path.resolve(PAGES_ROOT, relDir, `${base}.astro`);
+        const pageIdxAbs = path.resolve(PAGES_ROOT, relDir, base, "index.astro");
+        if (fs.existsSync(pageAbs)) {
+          items.push({ ...common, link: `/${norm(path.join(relDir, base))}` });
+          addedBases.add(base);
+        } else if (fs.existsSync(pageIdxAbs)) {
+          items.push({ ...common, link: `/${norm(path.join(relDir, base))}/` });
+          addedBases.add(base);
         } else {
-          const pageAbs = path.resolve("src/pages", relDir, `${base}.astro`);
-          const pageIdxAbs = path.resolve(
-            "src/pages",
-            relDir,
-            base,
-            "index.astro"
-          );
-          if (fs.existsSync(pageAbs)) {
-            items.push({
-              ...common,
-              link: `/${norm(path.join(relDir, base))}`,
-            });
-          } else if (fs.existsSync(pageIdxAbs)) {
-            items.push({
-              ...common,
-              link: `/${norm(path.join(relDir, base))}/`,
-            });
-          } else {
-            // No existe ruta real -> no lo añadimos al sidebar para evitar 404.
-          }
+          // Evitar 404
         }
       } else {
-        // Para contenido de colección (md/mdx/mdoc) usamos slug, salvo que en metadatos se provea un link/href explícito
-        let explicitLink = null;
-        if (typeof meta.link === "string" && meta.link.trim().length > 0) {
-          explicitLink = meta.link.trim();
-        } else if (typeof meta.href === "string" && meta.href.trim().length > 0) {
-          explicitLink = meta.href.trim();
-        }
-        if (explicitLink) {
-          const isExternal = /^https?:\/\//i.test(explicitLink);
-          const linkItem = { ...common, link: explicitLink };
-          if (isExternal) {
-            linkItem.external = true;
-          }
-          items.push(linkItem);
-        } else {
-          items.push({ ...common, slug: `${norm(relDir)}/${base}` });
-        }
+        // Colección (md/mdx/mdoc)
+        items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+        addedBases.add(base);
       }
     }
 
-    // Añadir entradas definidas en _metadata.json que no correspondan a un archivo físico
-    const metaItems =
-      dirMeta && typeof dirMeta === "object" ? dirMeta.items || {} : {};
-    const existingBases = new Set(
-      listFiles(absDir).map((f) => f.replace(/\.(md|mdx|mdoc|astro)$/i, ""))
-    );
+    // Entradas extra de _metadata.json (sin archivo físico)
+    const metaItems = dirMeta && typeof dirMeta === "object" ? dirMeta.items || {} : {};
+    const existingBases = new Set([
+      ...files.map((f) => f.replace(/\.(md|mdx|mdoc|astro)$/i, "")),
+      ...Array.from(linkMap.keys()),
+    ]);
     for (const metaKey of Object.keys(metaItems)) {
-      if (existingBases.has(metaKey)) continue; // ya procesado por archivo real
+      if (existingBases.has(metaKey)) continue;
       const meta = metaItems[metaKey] || dirMeta[metaKey] || {};
       if (!allow(!!meta.devOnly)) continue;
-      const common = {
-        __order: meta.order ?? 999,
-        label: meta.label ?? metaKey,
-      };
-      let explicitLink = null;
-      if (typeof meta.link === "string" && meta.link.trim().length > 0) {
-        explicitLink = meta.link.trim();
-      } else if (typeof meta.href === "string" && meta.href.trim().length > 0) {
-        explicitLink = meta.href.trim();
-      }
-      if (explicitLink) {
-        const isExternal = /^https?:\/\//i.test(explicitLink);
-        const linkItem = { ...common, link: explicitLink };
-        if (isExternal) {
-          linkItem.external = true;
-        }
-        items.push(linkItem);
-      } else if (typeof meta.slug === "string" && meta.slug.trim().length > 0) {
+      const common = { __order: meta.order ?? 999, label: meta.label ?? metaKey };
+      const explicit = getExplicitLink(meta);
+      if (explicit) {
+        const mode = getOpenMode(meta);
+        const final = isExternal(explicit)
+          ? (mode === 'embed' ? embedLink(explicit)
+            : mode === 'new' ? newTabLink(explicit)
+            : wrapExternal(explicit, mode))
+          : explicit;
+        items.push({ ...common, link: final });
+        addedBases.add(metaKey);
+      } else if (typeof meta.slug === "string" && meta.slug.trim()) {
         items.push({ ...common, slug: meta.slug.trim() });
-      } else {
-        // If no explicit link/slug provided, we skip to avoid broken links
+        addedBases.add(metaKey);
       }
     }
 
-    // Subcarpetas (recursivo)
-    for (const childName of listDirs(absDir)) {
+    // Entradas creadas por ficheros .link sin archivo de contenido asociado
+    for (const [base, url] of linkMap.entries()) {
+      if (addedBases.has(base)) continue;
+      const metaFromDir =
+        dirMeta && typeof dirMeta === "object"
+          ? dirMeta.items?.[base] || dirMeta[base] || {}
+          : {};
+      if (!allow(!!metaFromDir.devOnly)) continue;
+      const common = {
+        __order: metaFromDir.order ?? 999,
+        label: metaFromDir.label ?? prettyLabelFromBase(base),
+      };
+      const mode = getOpenMode(metaFromDir);
+      const final = isExternal(url)
+        ? (mode === 'embed' ? embedLink(url)
+          : mode === 'new' ? newTabLink(url)
+          : wrapExternal(url, mode))
+        : url;
+      items.push({ ...common, link: final });
+      addedBases.add(base);
+    }
+
+    // Subcarpetas
+    for (const childName of dirs) {
       const childAbs = path.join(absDir, childName);
       const childRel = relDir ? path.join(relDir, childName) : childName;
       const childSec = buildSection(childAbs, childRel, childName);
       if (childSec) items.push(childSec);
     }
 
-    // Ordenar por __order y limpiar metacampo
-    items.sort((a, b) => (a.__order ?? 999) - (b.__order ?? 999));
+    items.sort(sortByOrder);
     const cleanedItems = items.map(({ __order, ...it }) => it);
 
     return {
@@ -220,27 +291,14 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
     };
   }
 
-  // Construir secciones a partir de las carpetas de primer nivel
+  // Secciones de primer nivel
   const top = [];
   for (const dirName of listDirs(DOCS_ROOT)) {
     const abs = path.join(DOCS_ROOT, dirName);
     const sec = buildSection(abs, dirName, dirName);
     if (sec) top.push(sec);
   }
-
-  top.sort((a, b) => (a.__order ?? 999) - (b.__order ?? 999));
-
-// Sanitize sidebar objects to only include keys accepted by Starlight.
-// Starlight validates the sidebar shape strictly; remove any helper keys
-// (like `external`, `target`, `rel`) before returning the structure.
-function sanitizeNode(node) {
-  const allowed = {};
-  if (typeof node.label === "string") allowed.label = node.label;
-  if (typeof node.link === "string") allowed.link = node.link;
-  if (typeof node.slug === "string") allowed.slug = node.slug;
-  if (Array.isArray(node.items)) allowed.items = node.items.map(sanitizeNode);
-  return allowed;
-}
+  top.sort(sortByOrder);
 
   return top.map(({ __order, ...s }) => sanitizeNode(s));
 }

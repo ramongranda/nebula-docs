@@ -1,0 +1,143 @@
+/* External link icon in Starlight sidebar */
+#starlight__sidebar a[href^="http"]::after,
+#starlight__sidebar a[href^="/ext/new/"]::after,
+#starlight__sidebar a[href^="/ext/same/"]::after,
+#starlight__sidebar a[href^="/ext"]:not([href*="m=embed"])::after,
+#starlight__sidebar a[target="_blank"]::after,
+#starlight__sidebar a[rel~="external"]::after,
+aside[id*="sidebar"] a[href^="http"]::after,
+aside[id*="sidebar"] a[href^="/ext/new/"]::after,
+aside[id*="sidebar"] a[href^="/ext/same/"]::after,
+aside[id*="sidebar"] a[href^="/ext"]:not([href*="m=embed"])::after,
+aside[id*="sidebar"] a[target="_blank"]::after,
+aside[id*="sidebar"] a[rel~="external"]::after,
+aside[class*="sidebar"] a[href^="http"]::after,
+aside[class*="sidebar"] a[href^="/ext/new/"]::after,
+aside[class*="sidebar"] a[href^="/ext/same/"]::after,
+aside[class*="sidebar"] a[href^="/ext"]:not([href*="m=embed"])::after,
+aside[class*="sidebar"] a[target="_blank"]::after,
+aside[class*="sidebar"] a[rel~="external"]::after,
+nav[aria-label="Sidebar"] a[href^="http"]::after,
+nav[aria-label="Sidebar"] a[href^="/ext/new/"]::after,
+nav[aria-label="Sidebar"] a[href^="/ext/same/"]::after,
+nav[aria-label="Sidebar"] a[href^="/ext"]:not([href*="m=embed"])::after,
+nav[aria-label="Sidebar"] a[target="_blank"]::after,
+nav[aria-label="Sidebar"] a[rel~="external"]::after,
+nav[aria-label="Table of contents"] a[href^="http"]::after,
+nav[aria-label="Table of contents"] a[href^="/ext/new/"]::after,
+nav[aria-label="Table of contents"] a[href^="/ext/same/"]::after,
+nav[aria-label="Table of contents"] a[href^="/ext"]:not([href*="m=embed"])::after,
+nav[aria-label="Table of contents"] a[target="_blank"]::after,
+nav[aria-label="Table of contents"] a[rel~="external"]::after {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-inline-start: 0.35em;
+  vertical-align: text-bottom;
+  background-color: currentColor;
+  /* Mask using an external-link SVG (similar to StarlightIcon 'external') */
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="black" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h5v2H7v10h10v-3h2v5H5z"/></svg>');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="black" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h5v2H7v10h10v-3h2v5H5z"/></svg>');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+}
+
+/* Don't add icon to internal hashes or mailto/tel */
+#starlight__sidebar a[href^="#"]::after,
+aside[id*="sidebar"] a[href^="#"]::after,
+aside[class*="sidebar"] a[href^="#"]::after,
+#starlight__sidebar a[href^="mailto:"]::after,
+aside[id*="sidebar"] a[href^="mailto:"]::after,
+aside[class*="sidebar"] a[href^="mailto:"]::after,
+#starlight__sidebar a[href^="tel:"]::after,
+aside[id*="sidebar"] a[href^="tel:"]::after,
+aside[class*="sidebar"] a[href^="tel:"]::after,
+nav[aria-label="Sidebar"] a[href^="#"]::after,
+nav[aria-label="Sidebar"] a[href^="mailto:"]::after,
+nav[aria-label="Sidebar"] a[href^="tel:"]::after,
+nav[aria-label="Table of contents"] a[href^="#"]::after,
+nav[aria-label="Table of contents"] a[href^="mailto:"]::after,
+nav[aria-label="Table of contents"] a[href^="tel:"]::after {
+  content: none;
+}
+
+/* Fallback: if CSS masks are unsupported, show a simple arrow */
+@supports not (mask-image: url("") ) and not (-webkit-mask-image: url("") ) {
+  #starlight__sidebar a[href^="http"]::after,
+  #starlight__sidebar a[href^="/ext/new/"]::after,
+  #starlight__sidebar a[href^="/ext/same/"]::after,
+  #starlight__sidebar a[href^="/ext"]:not([href*="m=embed"])::after,
+  #starlight__sidebar a[target="_blank"]::after,
+  #starlight__sidebar a[rel~="external"]::after,
+  aside[id*="sidebar"] a[href^="http"]::after,
+  aside[id*="sidebar"] a[href^="/ext/new/"]::after,
+  aside[id*="sidebar"] a[href^="/ext/same/"]::after,
+  aside[id*="sidebar"] a[href^="/ext"]:not([href*="m=embed"])::after,
+  aside[id*="sidebar"] a[target="_blank"]::after,
+  aside[id*="sidebar"] a[rel~="external"]::after,
+  aside[class*="sidebar"] a[href^="http"]::after,
+  aside[class*="sidebar"] a[href^="/ext/new/"]::after,
+  aside[class*="sidebar"] a[href^="/ext/same/"]::after,
+  aside[class*="sidebar"] a[href^="/ext"]:not([href*="m=embed"])::after,
+  aside[class*="sidebar"] a[target="_blank"]::after,
+  aside[class*="sidebar"] a[rel~="external"]::after,
+  nav[aria-label="Sidebar"] a[href^="http"]::after,
+  nav[aria-label="Sidebar"] a[href^="/ext/new/"]::after,
+  nav[aria-label="Sidebar"] a[href^="/ext/same/"]::after,
+  nav[aria-label="Sidebar"] a[href^="/ext"]:not([href*="m=embed"])::after,
+  nav[aria-label="Sidebar"] a[target="_blank"]::after,
+  nav[aria-label="Sidebar"] a[rel~="external"]::after,
+  nav[aria-label="Table of contents"] a[href^="http"]::after,
+  nav[aria-label="Table of contents"] a[href^="/ext/new/"]::after,
+  nav[aria-label="Table of contents"] a[href^="/ext/same/"]::after,
+  nav[aria-label="Table of contents"] a[href^="/ext"]:not([href*="m=embed"])::after,
+  nav[aria-label="Table of contents"] a[target="_blank"]::after,
+  nav[aria-label="Table of contents"] a[rel~="external"]::after {
+    content: "\2197"; /* ↗ */
+    width: auto;
+    height: auto;
+    background: none;
+  }
+}
+
+/* Ext embed page: remove default markdown spacing so iframe can fill area */
+.ext-page { margin: 0; padding: 0; }
+.ext-page > * { margin: 0; padding: 0; }
+
+/* New-tab notice bar styling */
+.hidden { display: none !important; }
+.ext-new { padding: 0; margin: 0; }
+.ext-inner { max-width: var(--sl-content-width, 52rem); margin-inline: auto; }
+.ext-bar {
+  padding: 0.75rem 1rem;
+  font: 600 14px/1.4 var(--sl-font-system, system-ui);
+  background: var(--sl-color-bg-inline-code, rgba(0,0,0,0.06));
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 8px;
+}
+
+/* Remove ContentPanel padding on the ext page */
+/* Apply to all panels inside this page's content tree when it contains .ext-page */
+[data-pagefind-body]:has(.ext-page) .content-panel {
+  padding: 0 !important;
+}
+/* Also handle the specific panel containing .ext-page for broader support */
+.content-panel:has(.ext-page) { padding: 0 !important; }
+/* Fallback for browsers without :has support: neutralize padding via negative margins */
+.content-panel > .sl-container > .ext-page {
+  /* Counteract 1.5rem vertical padding and var(--sl-content-pad-x) horizontal */
+  margin-block: -1.5rem;
+  margin-inline: calc(-1 * var(--sl-content-pad-x));
+}
+
+/* Make inner container full-width on ext page */
+[data-pagefind-body]:has(.ext-page) .sl-container {
+  max-width: none !important;
+  width: 100% !important;
+  margin-inline: 0 !important;
+}

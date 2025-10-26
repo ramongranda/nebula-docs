@@ -1,0 +1,18 @@
+---
+title: External
+template: doc
+---
+
+import ExtNewHandler from '~/components/ExtNewHandler.svelte';
+
+<div class="ext-new-page">
+  <div id="ext-new" class="ext-new">
+    <div class="ext-inner">
+      <div class="ext-bar">
+        Open in a new tab: <a id="ext-new-link" target="_blank" rel="noopener external"></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ExtNewHandler client:load />

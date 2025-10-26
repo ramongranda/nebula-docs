@@ -10,7 +10,11 @@
     "authoring-content": {
       "label": "Authoring content in Markdown",
       "order": 5,
-      "link": "https://starlight.astro.build/guides/authoring-content/"
+      "open": "embed"
+    },
+    "external-tool": {
+      "order": 20,
+      "open": "new"
     }
   }
 }

@@ -32,6 +32,9 @@ export default defineConfig({
       { icon: "github", label: "GitHub", href: "https://github.com/ramongranda/nebula-docs" },
     ],
     sidebar,
+    components: {
+      PageTitle: "./src/components/HiddenPageTitle.astro",
+    },
   }), starlightAutoDrafts({ highlights: { badges: false } }), svelte(), mermaid({
     autoTheme: true,
     mermaidConfig: { flowchart: { curve: "basis" } },

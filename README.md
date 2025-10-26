@@ -45,6 +45,55 @@ Nebula includes a small custom builder that scans `src/content/docs/` and produc
 - For regular directories, the script looks for `.md`, `.mdx` and `.mdoc` files and for each content file it attempts to read a companion JSON metadata file named `<base>.meta.json` (e.g. `example.meta.json`). That metadata controls per-page `label`, `slug`, `order`, and `devOnly`.
 - The builder respects `devOnly` flags: pages or sections marked dev-only are included only when `NODE_ENV=development` or when `SHOW_REFERENCE=true`.
 
+### Link files (.link)
+
+Nebula supports simple companion link files to declare external links in the sidebar without editing JSON metadata:
+
+- Co-named `.link`: if a content file `foo.mdx` (or `.md`, `.mdoc`, `.astro`) has a sibling `foo.link`, the text inside `foo.link` is used as the sidebar URL for that entry. This takes precedence over any `link`/`href` defined in metadata. If no `label` is provided in metadata, the label is derived from the base filename and prettified (e.g., `authoring-content` → `Authoring Content`).
+- Standalone `.link`: if `foo.link` exists without a content file, the builder creates a link-only sidebar item. You may still control `label`/`order` via folder metadata using the base key (`foo`); otherwise the label is prettified from the filename and the order defaults to `999`.
+
+Note: the dev server watcher is configured to restart on `.link` changes. External links (http/https) in the sidebar render with an external-link icon next to the label.
+
+#### Example
+
+Folder structure:
+
+```text
+src/content/docs/
+└─ guides/
+   ├─ authoring-content.mdx
+   ├─ authoring-content.link      # contains: https://docs.example.com/authoring
+   ├─ external-tool.link          # contains: https://tool.example.com
+   └─ _metadata.json              # optional label/order overrides
+```
+
+Resulting sidebar items under "Guides":
+
+```jsonc
+[
+  { "label": "Authoring Content", "link": "https://docs.example.com/authoring" },
+  { "label": "External Tool", "link": "https://tool.example.com" }
+]
+```
+
+Notes:
+
+- If `_metadata.json` provides `items.authoring-content.label`, that label is used instead of the prettified filename.
+- Standalone `.link` items can also receive `label`/`order` from `_metadata.json` under the same base key (e.g., `items.external-tool`).
+
+### Controlling how external links open
+
+Per item you can set an `open` mode in `_metadata.json` (either in `items.<base>` or `<base>`):
+
+- `"same"` (default): open the external URL in the same tab.
+- `"new"`: open in a new tab.
+- `"embed"`: load the external URL inside the site chrome using an iframe wrapper.
+
+Implementation details:
+
+- The sidebar builder wraps external URLs with a path helper `/ext/<mode>/<encoded>` (where `<encoded>` is base64url of the full URL) to implement these behaviors without relying on unsupported `target`/`rel` keys in Starlight’s sidebar.
+- The external link icon in the sidebar also appears for wrapped links.
+
 ### Folder metadata details (schema & examples)
 
 Folder-level metadata lives in a file named `_section.json` inside a documentation subfolder (for example `src/content/docs/reference/_section.json`). Fields supported:

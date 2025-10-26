@@ -1,0 +1,19 @@
+---
+import DefaultPageTitle from '@astrojs/starlight/components/PageTitle.astro';
+// Avoid importing internal constants; replicate the value used by Starlight ('_top').
+const PAGE_TITLE_ID = '_top';
+
+const route = Astro.locals?.starlightRoute;
+const pathname = Astro.url?.pathname || '';
+const pageId = route?.id || route?.slug || '';
+const hide = pathname === '/ext' || pageId === 'ext';
+const title = route?.entry?.data?.title || '';
+---
+{hide ? (
+  // Keep accessible H1 for skip links and ToC, but visually hide it
+  <h1 id={PAGE_TITLE_ID} style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+    {title}
+  </h1>
+) : (
+  <DefaultPageTitle />
+)}
