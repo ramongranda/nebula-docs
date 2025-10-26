@@ -6,5 +6,11 @@
       "label": "Example Guide",
       "order": 10
     }
+    ,
+    "authoring-content": {
+      "label": "Authoring content in Markdown",
+      "order": 5,
+      "link": "https://starlight.astro.build/guides/authoring-content/"
+    }
   }
 }

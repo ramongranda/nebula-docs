@@ -107,9 +107,17 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
       if (isAstro) {
         // Para archivos .astro sólo enlazamos si existe una página real en src/pages
         // o si viene un link explícito en metadatos.
-        const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0 ? meta.link.trim() : null;
-        if (explicitLink) {
-          items.push({ ...common, link: explicitLink });
+          const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0 ? meta.link.trim() : null;
+          if (explicitLink) {
+            // detect external links and add safe defaults (open in new tab, noopener)
+            const isExternal = /^https?:\/\//i.test(explicitLink);
+            const linkItem = { ...common, link: explicitLink };
+            if (isExternal) {
+              // Starlight rejects unknown keys like `target`/`rel` in the sidebar config.
+              // Use a small flag `external` so the renderer can decide to add target/rel.
+              linkItem.external = true;
+            }
+            items.push(linkItem);
         } else {
           const pageAbs = path.resolve('src/pages', relDir, `${base}.astro`);
           const pageIdxAbs = path.resolve('src/pages', relDir, base, 'index.astro');
@@ -122,8 +130,48 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
           }
         }
       } else {
-        // Para contenido de colección (md/mdx/mdoc) usamos slug
-        items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+        // Para contenido de colección (md/mdx/mdoc) usamos slug, salvo que en metadatos se provea un link/href explícito
+          const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0
+            ? meta.link.trim()
+            : (typeof meta.href === 'string' && meta.href.trim().length > 0 ? meta.href.trim() : null);
+          if (explicitLink) {
+            const isExternal = /^https?:\/\//i.test(explicitLink);
+            const linkItem = { ...common, link: explicitLink };
+            if (isExternal) {
+              linkItem.external = true;
+            }
+            items.push(linkItem);
+          } else {
+            items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+          }
+      }
+    }
+
+    // Añadir entradas definidas en _metadata.json que no correspondan a un archivo físico
+    const metaItems = (dirMeta && typeof dirMeta === 'object') ? (dirMeta.items || {}) : {};
+    const existingBases = new Set(listFiles(absDir).map(f => f.replace(/\.(md|mdx|mdoc|astro)$/i, "")));
+    for (const metaKey of Object.keys(metaItems)) {
+      if (existingBases.has(metaKey)) continue; // ya procesado por archivo real
+      const meta = metaItems[metaKey] || dirMeta[metaKey] || {};
+      if (!allow(!!meta.devOnly)) continue;
+      const common = {
+        __order: meta.order ?? 999,
+        label: meta.label ?? metaKey,
+      };
+      const explicitLink = typeof meta.link === 'string' && meta.link.trim().length > 0
+        ? meta.link.trim()
+        : (typeof meta.href === 'string' && meta.href.trim().length > 0 ? meta.href.trim() : null);
+      if (explicitLink) {
+        const isExternal = /^https?:\/\//i.test(explicitLink);
+        const linkItem = { ...common, link: explicitLink };
+        if (isExternal) {
+          linkItem.external = true;
+        }
+        items.push(linkItem);
+      } else if (typeof meta.slug === 'string' && meta.slug.trim().length > 0) {
+        items.push({ ...common, slug: meta.slug.trim() });
+      } else {
+        // If no explicit link/slug provided, we skip to avoid broken links
       }
     }
 
@@ -155,5 +203,18 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
   }
 
   top.sort((a, b) => (a.__order ?? 999) - (b.__order ?? 999));
-  return top.map(({ __order, ...s }) => s);
+
+  // Sanitize sidebar objects to only include keys accepted by Starlight.
+  // Starlight validates the sidebar shape strictly; remove any helper keys
+  // (like `external`, `target`, `rel`) before returning the structure.
+  function sanitizeNode(node) {
+    const allowed = {};
+    if (typeof node.label === 'string') allowed.label = node.label;
+    if (typeof node.link === 'string') allowed.link = node.link;
+    if (typeof node.slug === 'string') allowed.slug = node.slug;
+    if (Array.isArray(node.items)) allowed.items = node.items.map(sanitizeNode);
+    return allowed;
+  }
+
+  return top.map(({ __order, ...s }) => sanitizeNode(s));
 }
