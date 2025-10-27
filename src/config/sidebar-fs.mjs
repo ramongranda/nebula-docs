@@ -219,7 +219,11 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
         }
       } else {
         // Colección (md/mdx/mdoc)
-        items.push({ ...common, slug: `${norm(relDir)}/${base}` });
+          // Normalize index files so that `reference/index` becomes `reference`, matching
+          // the slug normalization used by the routing logic (which treats folder index
+          // pages as the folder slug).
+          const generatedSlug = base === 'index' ? norm(relDir) : `${norm(relDir)}/${base}`;
+          items.push({ ...common, slug: generatedSlug.replace(/^\/+/, '') });
         addedBases.add(base);
       }
     }
