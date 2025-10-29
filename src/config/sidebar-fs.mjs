@@ -33,21 +33,27 @@ function readJSON(file) {
 function listDirs(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
+    // Exclude directories that start with '_' (private/hidden folders)
+    .filter((d) => d.isDirectory() && !d.name.startsWith("_"))
     .map((d) => d.name);
 }
 function listFiles(dir, exts = CONTENT_EXTS) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
+    // Exclude files that start with '_' (private/hidden files)
     .filter(
-      (d) => d.isFile() && exts.some((e) => d.name.toLowerCase().endsWith(e))
+      (d) =>
+        d.isFile() &&
+        !d.name.startsWith("_") &&
+        exts.some((e) => d.name.toLowerCase().endsWith(e))
     )
     .map((d) => d.name);
 }
 function listLinkFiles(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
-    .filter((d) => d.isFile() && d.name.toLowerCase().endsWith(LINK_EXT))
+    // Exclude link files that start with '_' to avoid exposing internal links
+    .filter((d) => d.isFile() && !d.name.startsWith("_") && d.name.toLowerCase().endsWith(LINK_EXT))
     .map((d) => d.name);
 }
 function readLinkText(file) {
@@ -127,7 +133,7 @@ const newTabLink = (url) => `/ext-new?u=${encodeURIComponent(url)}`;
 
 // Pretty label from base filename (e.g., "authoring-content" -> "Authoring Content")
 function prettyLabelFromBase(base) {
-  const name = String(base).replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+  const name = String(base).replaceAll(/[-_]+/g, " ").replaceAll(/\s+/g, " ").trim();
   if (!name) return base;
   return name
     .split(" ")
@@ -235,6 +241,8 @@ export function buildSidebarFromFS({ isDev, showReference = false }) {
       ...Array.from(linkMap.keys()),
     ]);
     for (const metaKey of Object.keys(metaItems)) {
+      // Skip metadata entries that are private (start with '_')
+      if (metaKey.startsWith("_")) continue;
       if (existingBases.has(metaKey)) continue;
       const meta = metaItems[metaKey] || dirMeta[metaKey] || {};
       if (!allow(!!meta.devOnly)) continue;
